@@ -1,0 +1,51 @@
+.table-container {
+  margin: 1rem;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.cell-content {
+  cursor: pointer;
+}
+
+.cell-content:hover {
+  color: var(--bs-primary);
+}
+
+.actions-header, .actions {
+  white-space: nowrap;
+  width: 1%;
+}
+
+tr:hover:not(.editing) {
+  background-color: rgba(0,0,0,0.02);
+  cursor: pointer;
+}
+
+.editing {
+  background-color: rgba(13,110,253,0.05);
+}
+
+.pagination {
+  margin-bottom: 0;
+}
+
+.page-link {
+  cursor: pointer;
+}
+
+.input-group {
+  max-width: 300px;
+}
+
+.input-group-text {
+  background-color: white;
+}
+
+.bi-search {
+  color: #6c757d;
+}
