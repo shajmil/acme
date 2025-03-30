@@ -1,60 +1,42 @@
-<div class="table-container">
-    @if (!store.loading() && !store.error() && store.users().length) {
-      <div class="mb-3">
-        <div class="input-group">
-          <span class="input-group-text">
-            <i class="bi bi-search"></i>
-          </span>
-          <input 
-            type="text" 
-            class="form-control" 
-            placeholder="Search users..." 
-            [ngModel]="searchQuery()"
-            (ngModelChange)="onSearch($event)"
-          >
-        </div>
-      </div>
-    }
+<div class="container-fluid d-flex flex-column" style="height: 100vh; padding: 0.5rem;">
+  <div class="search-container d-flex justify-content-end mb-1">
+    <div class="search-box position-relative" style="max-width: 400px; width: 100%;">
+      <span class="search-icon material-symbols-outlined" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 18px;">search</span>
+      <input 
+        type="text" 
+        class="form-control search-input" 
+        placeholder="Search users..." 
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearch($event)"
+        style="padding-left: 2.5rem; border-radius: 20px; box-shadow: none; height: 36px; font-size: 14px;"
+      >
+    </div>
+  </div>
 
-    @if (store.loading()) {
-      <div class="loading-spinner">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } 
-    
-    @if (store.error()) {
-      <div class="alert alert-danger">
-        {{ store.error() }}
-      </div>
-    }
-
-    @if (!store.loading() && !store.error() && store.users().length) {
-      <div class="table-responsive">
-        <table class="table">
+  <div class="flex-grow-1 d-flex flex-column">
+    <div class="data-card shadow-sm rounded flex-grow-1 d-flex flex-column">
+      <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: calc(100vh - 110px);">
+        <table class="table table-hover mb-0">
           <thead>
-            <tr>
+            <tr style="background-color: #f8f9fa; font-size: 14px; height: 32px;">
               @for (header of tableHeaders(); track header) {
-                <th>{{ header | titlecase }}</th>
+                <th class="py-1 px-2">{{ header | titlecase }}</th>
               }
-              <th class="actions-header">Actions</th>
+              <th class="text-end py-1 px-2">Actions</th>
             </tr>
           </thead>
-
           <tbody>
             @for (user of store.paginatedUsers(); track user.id) {
-              <tr [class.editing]="isEditing(user.id)" 
-                  (click)="handleRowClick(user.id)">
+              <tr [class.editing-row]="isEditing(user.id)" (click)="handleRowClick(user.id)" class="table-row" style="font-size: 14px; height: 40px;">
                 @for (header of tableHeaders(); track header) {
-                  <td>
+                  <td class="py-1 px-2">
                     <ng-container 
                       [ngTemplateOutlet]="isEditing(user.id) ? editTemplate : displayTemplate"
                       [ngTemplateOutletContext]="{ $implicit: user, header: header }">
                     </ng-container>
                   </td>
                 }
-                <td class="actions" (click)="$event.stopPropagation()">
+                <td class="text-end py-1 px-2" (click)="$event.stopPropagation()">
                   <ng-container 
                     [ngTemplateOutlet]="isEditing(user.id) ? editActions : viewActions"
                     [ngTemplateOutletContext]="{ $implicit: user }">
@@ -64,63 +46,72 @@
             }
           </tbody>
         </table>
+      </div>
+    </div>
 
-        <nav aria-label="Page navigation" class="d-flex justify-content-center mt-3">
-          <ul class="pagination">
-            <li class="page-item" [class.disabled]="store.currentPage() === 1">
-              <button class="page-link" (click)="store.setPage(store.currentPage() - 1)">
-                Previous
+    <div class="pagination-container d-flex justify-content-center mt-1">
+      <nav>
+        <ul class="pagination">
+          <li class="page-item" [class.disabled]="store.currentPage() === 1">
+            <button class="page-link" (click)="store.setPage(store.currentPage() - 1)">
+              <span class="material-symbols-outlined">navigate_before</span>
+            </button>
+          </li>
+          @for (page of store.pageNumbers(); track page) {
+            <li class="page-item" [class.active]="page === store.currentPage()">
+              <button class="page-link" (click)="store.setPage(page)">
+                {{ page }}
               </button>
             </li>
-            
-            @for (page of store.pageNumbers(); track page) {
-              <li class="page-item" [class.active]="page === store.currentPage()">
-                <button class="page-link" (click)="store.setPage(page)">
-                  {{ page }}
-                </button>
-              </li>
-            }
-            
-            <li class="page-item" [class.disabled]="store.currentPage() === store.totalPages()">
-              <button class="page-link" (click)="store.setPage(store.currentPage() + 1)">
-                Next
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    }
-
-    @if (!store.loading() && !store.error() && !store.paginatedUsers().length && store.users().length) {
-      <div class="alert alert-info">
-        No users found matching your search.
-      </div>
-    }
+          }
+          <li class="page-item" [class.disabled]="store.currentPage() === store.totalPages()">
+            <button class="page-link" (click)="store.setPage(store.currentPage() + 1)">
+              <span class="material-symbols-outlined">navigate_next</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
   </div>
+</div>
 
-  <ng-template #displayTemplate let-user let-header="header">
-    <span class="cell-content">{{ user[header] }}</span>
-  </ng-template>
 
-  <ng-template #editTemplate let-user let-header="header">
-    <app-editable-cell
-      [value]="user[header]"
-      (valueChange)="updateField(user, header, $event)"
-      (click)="$event.stopPropagation()"
-    />
-  </ng-template>
+<ng-template #displayTemplate let-user let-header="header">
+  @if (header === 'id' || header === 'name') {
+    <div class="user-profile d-flex align-items-center">
+      <div class="user-avatar" style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+        {{ user[header].charAt(0) }}
+      </div>
+      <span class="ms-3">{{ user[header] }}</span>
+    </div>
+  } @else {
+    <span>{{ user[header] }}</span>
+  }
+</ng-template>
 
-  <ng-template #editActions let-user>
-    <button class="btn btn-success btn-sm me-2" (click)="saveEdit()">
-      <i class="bi bi-check-lg"></i> Save
+<ng-template #editTemplate let-user let-header="header">
+  <app-editable-cell
+    [value]="user[header]"
+    (valueChange)="updateField(user, header, $event)"
+    class="w-100"
+  />
+</ng-template>
+
+<ng-template #editActions let-user>
+  <div class="edit-actions d-flex" style="gap: 0.5rem;">
+    <button class="btn action-btn btn-sm text-success" (click)="saveEdit()">
+      <span class="material-symbols-outlined">check</span>
     </button>
-    <button class="btn btn-secondary btn-sm" (click)="cancelEdit()">
-      <i class="bi bi-x-lg"></i> Cancel
+    <button class="btn action-btn btn-sm text-secondary" (click)="cancelEdit()">
+      <span class="material-symbols-outlined">close</span>
     </button>
-  </ng-template>
+  </div>
+</ng-template>
 
-  <ng-template #viewActions let-user>
-    <button class="btn btn-primary btn-sm" (click)="startEdit(user.id)">
-      <i class="bi bi-pencil"></i> Edit
-    </button>
-  </ng-template>
+<ng-template #viewActions let-user>
+  <button class="btn btn-light action-btn btn-sm shadow-sm" (click)="startEdit(user.id)">
+    <span class="material-symbols-outlined">edit</span>
+    Edit
+  </button>
+</ng-template>
+
