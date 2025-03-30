@@ -54,6 +54,7 @@ import { FormsModule } from '@angular/forms';
 export class EditableCellComponent {
   @Input() value: any;
   @Input() fieldType: string = 'text';
+  @Input() field: string = '';
   @Output() valueChange = new EventEmitter<any>();
   
   editValue: any;

@@ -1,72 +1,170 @@
 <div class="container-fluid d-flex flex-column" style="height: 100vh; padding: 0.5rem;">
-  <div class="search-container d-flex justify-content-end mb-1">
-    <div class="search-box position-relative" style="max-width: 400px; width: 100%;">
-      <span class="search-icon material-symbols-outlined" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 18px;">search</span>
+  <div class="filter-container d-flex justify-content-between align-items-center mb-3">
+    <div class="filter-section d-flex align-items-center gap-2">
+      <div class="dropdown" ngbDropdown>
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                type="button" 
+                ngbDropdownToggle>
+          <span class="material-symbols-outlined align-middle me-1" style="font-size: 16px;">filter_list</span>
+          Filter
+        </button>
+        <div class="dropdown-menu p-2" ngbDropdownMenu style="min-width: 250px;">
+          <h6 class="dropdown-header">Filter by</h6>
+          @for (header of filterableFields(); track header) {
+            <div class="mb-2">
+              <label class="form-label small mb-1">{{ header | titlecase }}</label>
+              <input 
+                type="text" 
+                class="form-control form-control-sm" 
+                placeholder="Filter {{ header }}..."
+                [ngModel]="filters[header]"
+                (ngModelChange)="updateFilter(header, $event)"
+              >
+            </div>
+          }
+        </div>
+      </div>
+      
+      <div class="active-filters d-flex flex-wrap gap-1">
+        @for (filter of activeFilters(); track filter.field) {
+          <div class="badge bg-light text-dark d-flex align-items-center p-2">
+            <span class="me-1">{{ filter.field | titlecase }}: {{ filter.value }}</span>
+            <span class="material-symbols-outlined" style="font-size: 14px; cursor: pointer;" 
+              (click)="removeFilter(filter.field)">close</span>
+          </div>
+        }
+      </div>
+    </div>
+    
+    <div class="search-box position-relative" style="max-width: 300px; width: 100%;">
+      <span class="material-symbols-outlined" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6c757d; font-size: 16px;">search</span>
       <input 
         type="text" 
-        class="form-control search-input" 
-        placeholder="Search users..." 
-        [ngModel]="searchQuery()"
-        (ngModelChange)="onSearch($event)"
-        style="padding-left: 2.5rem; border-radius: 20px; box-shadow: none; height: 36px; font-size: 14px;"
+        class="form-control form-control-sm" 
+        placeholder="Search all fields..." 
+        [(ngModel)]="searchQuery"
+        style="padding-left: 2rem; border-radius: 20px;"
       >
     </div>
   </div>
 
   <div class="flex-grow-1 d-flex flex-column">
-    <div class="data-card shadow-sm rounded flex-grow-1 d-flex flex-column">
-      <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: calc(100vh - 110px);">
-        <table class="table table-hover mb-0">
-          <thead>
-            <tr style="background-color: #f8f9fa; font-size: 14px; height: 32px;">
-              @for (header of tableHeaders(); track header) {
-                <th class="py-1 px-2">{{ header | titlecase }}</th>
-              }
-              <th class="text-end py-1 px-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (user of store.paginatedUsers(); track user.id) {
-              <tr [class.editing-row]="isEditing(user.id)" (click)="handleRowClick(user.id)" class="table-row" style="font-size: 14px; height: 40px;">
+    <div class="card shadow-sm rounded flex-grow-1 d-flex flex-column">
+      <div class="card-header bg-white p-0 border-bottom">
+        <div class="d-flex justify-content-between align-items-center px-3 py-2">
+          <h6 class="m-0">Users <span class="text-muted ms-2">({{ filteredUsers().length }})</span></h6>
+          <div class="d-flex align-items-center">
+            <div class="dropdown me-2" ngbDropdown>
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                      type="button" 
+                      ngbDropdownToggle>
+                {{ state().pageSize }} per page
+              </button>
+              <ul class="dropdown-menu" ngbDropdownMenu>
+                <li><button class="dropdown-item" (click)="setPageSize(5)">5 per page</button></li>
+                <li><button class="dropdown-item" (click)="setPageSize(10)">10 per page</button></li>
+                <li><button class="dropdown-item" (click)="setPageSize(20)">20 per page</button></li>
+                <li><button class="dropdown-item" (click)="setPageSize(50)">50 per page</button></li>
+              </ul>
+            </div>
+            
+         
+          </div>
+        </div>
+      </div>
+      
+      <div class="table-responsive flex-grow-1" style="overflow-y: auto;">
+        @if (loading()) {
+          <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        } @else if (paginatedUsers().length === 0) {
+          <div class="d-flex flex-column justify-content-center align-items-center py-5 text-muted">
+            <span class="material-symbols-outlined" style="font-size: 48px;">search_off</span>
+            <p class="mt-2">No users found</p>
+            <button class="btn btn-sm btn-outline-secondary" (click)="resetFilters()">
+              Reset filters
+            </button>
+          </div>
+        } @else {
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr class="table-light">
                 @for (header of tableHeaders(); track header) {
-                  <td class="py-1 px-2">
+                  <th class="px-3 py-2" (click)="sortBy(header)" style="cursor: pointer;">
+                    <div class="d-flex align-items-center">
+                      {{ header | titlecase }}
+                      @if (state().sortField === header) {
+                        <span class="material-symbols-outlined ms-1" style="font-size: 18px;">
+                          {{ state().sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                        </span>
+                      }
+                    </div>
+                  </th>
+                }
+                <th class="text-end px-3 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of paginatedUsers(); track user.id) {
+                <tr 
+                  [class.table-active]="isEditing(user.id)" 
+                  (click)="handleRowClick(user.id)" 
+                  class="user-row" 
+                  style="vertical-align: middle;"
+                >
+                  @for (header of tableHeaders(); track header) {
+                    <td class="px-3 py-2">
+                      <ng-container 
+                        [ngTemplateOutlet]="isEditing(user.id) ? editTemplate : displayTemplate"
+                        [ngTemplateOutletContext]="{ $implicit: user, header: header }">
+                      </ng-container>
+                    </td>
+                  }
+                  <td class="text-end px-3 py-2" (click)="$event.stopPropagation()">
                     <ng-container 
-                      [ngTemplateOutlet]="isEditing(user.id) ? editTemplate : displayTemplate"
-                      [ngTemplateOutletContext]="{ $implicit: user, header: header }">
+                      [ngTemplateOutlet]="isEditing(user.id) ? editActions : viewActions"
+                      [ngTemplateOutletContext]="{ $implicit: user }">
                     </ng-container>
                   </td>
-                }
-                <td class="text-end py-1 px-2" (click)="$event.stopPropagation()">
-                  <ng-container 
-                    [ngTemplateOutlet]="isEditing(user.id) ? editActions : viewActions"
-                    [ngTemplateOutletContext]="{ $implicit: user }">
-                  </ng-container>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
       </div>
     </div>
 
-    <div class="pagination-container d-flex justify-content-center mt-1">
-      <nav>
-        <ul class="pagination">
-          <li class="page-item" [class.disabled]="store.currentPage() === 1">
-            <button class="page-link" (click)="store.setPage(store.currentPage() - 1)">
-              <span class="material-symbols-outlined">navigate_before</span>
+    <div class="pagination-container d-flex justify-content-between align-items-center mt-3">
+      <div class="page-info text-muted small">
+        Showing {{ paginationInfo().start }}-{{ paginationInfo().end }} of {{ filteredUsers().length }} users
+      </div>
+      
+      <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item" [class.disabled]="currentPage() === 1">
+            <button class="page-link" (click)="setPage(currentPage() - 1)">
+              <span class="material-symbols-outlined" style="font-size: 16px;">chevron_left</span>
             </button>
           </li>
-          @for (page of store.pageNumbers(); track page) {
-            <li class="page-item" [class.active]="page === store.currentPage()">
-              <button class="page-link" (click)="store.setPage(page)">
-                {{ page }}
-              </button>
-            </li>
+          
+          @for (page of visiblePageNumbers(); track page.index) {
+            @if (page.value === 'ellipsis') {
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            } @else {
+              <li class="page-item" [class.active]="page.value === currentPage()"> 
+                <button class="page-link" (click)="setPage(+page.value)">{{ page.value }}</button>
+              </li>
+            }
           }
-          <li class="page-item" [class.disabled]="store.currentPage() === store.totalPages()">
-            <button class="page-link" (click)="store.setPage(store.currentPage() + 1)">
-              <span class="material-symbols-outlined">navigate_next</span>
+          
+          <li class="page-item" [class.disabled]="currentPage() === totalPages()">
+            <button class="page-link" (click)="setPage(currentPage() + 1)">
+              <span class="material-symbols-outlined" style="font-size: 16px;">chevron_right</span>
             </button>
           </li>
         </ul>
@@ -75,43 +173,50 @@
   </div>
 </div>
 
-
 <ng-template #displayTemplate let-user let-header="header">
-  @if (header === 'id' || header === 'name') {
-    <div class="user-profile d-flex align-items-center">
-      <div class="user-avatar" style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        {{ user[header].charAt(0) }}
+  @if (header === 'name') {
+    <div class="d-flex align-items-center">
+      <div class="avatar-wrapper rounded-circle d-flex align-items-center justify-content-center text-white" 
+        [style.background-color]="getUserColor(user.id)"
+        style="width: 32px; height: 32px; font-size: 14px;">
+        {{ getUserInitials(user[header]) }}
       </div>
-      <span class="ms-3">{{ user[header] }}</span>
+      <span class="ms-2">{{ user[header] }}</span>
     </div>
+  } @else if (header === 'version') {
+    <span class="badge rounded-pill" [ngClass]="getVersionClass(user[header])">v{{ user[header] }}</span>
   } @else {
-    <span>{{ user[header] }}</span>
+    <span>{{ formatValue(user[header]) }}</span>
   }
 </ng-template>
 
 <ng-template #editTemplate let-user let-header="header">
   <app-editable-cell
     [value]="user[header]"
+    [field]="header"
     (valueChange)="updateField(user, header, $event)"
     class="w-100"
   />
 </ng-template>
 
 <ng-template #editActions let-user>
-  <div class="edit-actions d-flex" style="gap: 0.5rem;">
-    <button class="btn action-btn btn-sm text-success" (click)="saveEdit()">
-      <span class="material-symbols-outlined">check</span>
+  <div class="d-flex gap-1">
+    <button class="btn btn-sm btn-success" (click)="saveEdit()">
+      <span class="material-symbols-outlined" style="font-size: 16px;">check</span>
     </button>
-    <button class="btn action-btn btn-sm text-secondary" (click)="cancelEdit()">
-      <span class="material-symbols-outlined">close</span>
+    <button class="btn btn-sm btn-light" (click)="cancelEdit()">
+      <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
     </button>
   </div>
 </ng-template>
 
 <ng-template #viewActions let-user>
-  <button class="btn btn-light action-btn btn-sm shadow-sm" (click)="startEdit(user.id)">
-    <span class="material-symbols-outlined">edit</span>
-    Edit
-  </button>
+  <div class="d-flex gap-1">
+    <button class="btn btn-sm btn-outline-primary" (click)="startEdit(user.id)">
+      <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+    </button>
+    <button class="btn btn-sm btn-outline-secondary" (click)="viewDetails(user.id)">
+      <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+    </button>
+  </div>
 </ng-template>
-
